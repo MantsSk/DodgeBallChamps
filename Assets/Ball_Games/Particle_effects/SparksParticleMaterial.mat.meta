@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8336b740bdd4d7549bef3a8842c51047
+timeCreated: 1447835666
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 50277
+  packageName: Ball Games - Ultimate Sport Package
+  packageVersion: 1.0
+  assetPath: Assets/Ball_Games/Particle_effects/SparksParticleMaterial.mat
+  uploadId: 90657

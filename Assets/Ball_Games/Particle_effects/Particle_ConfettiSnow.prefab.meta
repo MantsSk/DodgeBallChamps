@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ccac450fe1529874f838ac49572a05f6
+timeCreated: 1447857059
+licenseType: Store
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 50277
+  packageName: Ball Games - Ultimate Sport Package
+  packageVersion: 1.0
+  assetPath: Assets/Ball_Games/Particle_effects/Particle_ConfettiSnow.prefab
+  uploadId: 90657
