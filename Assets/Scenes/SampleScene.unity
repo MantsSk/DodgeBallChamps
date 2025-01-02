@@ -718,10 +718,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 44774880c5eaf4123ab56c59976da8ab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 4
+  moveSpeed: 5
   dodgeSpeed: 6
+  constantMoveChangeInterval: 2
   playerTransform: {fileID: 759581671}
   handTransform: {fileID: 1385896839}
+  moveRange: 1
+  pingPongMovement: 1
   throwCooldown: 2
 --- !u!54 &998402136
 Rigidbody:

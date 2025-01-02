@@ -8,7 +8,7 @@ public class AIController : MonoBehaviour
     [Header("AI Settings")]
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float dodgeSpeed = 6f;
-    [SerializeField] private float repositionRadius = 3f; // Radius for random repositioning
+    [SerializeField] private float constantMoveChangeInterval = 2f; // Interval to change movement direction
 
     [Header("References")]
     [SerializeField] private Transform playerTransform;   // The player's transform
@@ -18,7 +18,15 @@ public class AIController : MonoBehaviour
     private AIState _currentState;
     private BallController _heldBall;
 
+    private Vector3 _constantMoveDirection; // Direction for constant movement
+    private float _nextMoveChangeTime;
+
     private float _nextThrowTime;
+
+    [SerializeField] private float moveRange = 0.5f; // Range of movement around its starting position
+    [SerializeField] private bool pingPongMovement = true; // Toggle for ping pong movement
+    private Vector3 _startPosition; // Store the AI's starting position
+    private bool _movingRight = true; // Direction toggle for ping pong movement
     [SerializeField] private float throwCooldown = 2f;
 
     private void Awake()
@@ -29,6 +37,8 @@ public class AIController : MonoBehaviour
     private void Start()
     {
         _currentState = AIState.SeekBall;
+        ChangeConstantMoveDirection(); // Initialize the movement direction
+        _startPosition = transform.position; // Store starting position
     }
 
     private void FixedUpdate()
@@ -41,15 +51,17 @@ public class AIController : MonoBehaviour
             case AIState.Attack:
                 AttackBehavior();
                 break;
-            case AIState.Dodge:
-                DodgeBehavior();
-                break;
+        //     case AIState.Dodge:
+        //         DodgeBehavior();
+        //         break;
         }
+
+        // Add constant movement regardless of state
+        ApplyConstantMovement();
 
         if (ShouldDodge())
         {
             _currentState = AIState.Dodge;
-            Debug.Log("Test");
         }
     }
 
@@ -61,15 +73,8 @@ public class AIController : MonoBehaviour
             return;
         }
 
-        // Random movement
-        Vector3 randomDirection = new Vector3(
-            Random.Range(-1f, 1f),
-            0f,
-            Random.Range(-1f, 1f)
-        ).normalized;
-
-        Vector3 targetPosition = transform.position + randomDirection * 2f; // Move a small distance randomly
-        MoveTowards(targetPosition, moveSpeed);
+        // AI will move randomly while seeking the ball
+        Debug.Log("AI is seeking the ball.");
     }
 
     private void AttackBehavior()
@@ -80,12 +85,9 @@ public class AIController : MonoBehaviour
             return;
         }
 
-        // Face the player and move toward them slightly
+        // AI moves toward the player while preparing to throw
         Vector3 toPlayer = (playerTransform.position - transform.position).normalized;
-        Vector3 repositionOffset = Vector3.Cross(toPlayer, Vector3.up).normalized * Random.Range(-1f, 1f);
-        Vector3 targetPosition = transform.position + repositionOffset;
-
-        MoveTowards(targetPosition, moveSpeed);
+        _rb.velocity = toPlayer * moveSpeed;
 
         // Throw at intervals
         if (Time.time >= _nextThrowTime)
@@ -95,57 +97,81 @@ public class AIController : MonoBehaviour
         }
     }
 
-    private void MoveTowards(Vector3 targetPosition, float speed)
+    // private void DodgeBehavior()
+    // {
+    //     Vector3 dodgeDirection = Vector3.Cross(Vector3.up, (playerTransform.position - transform.position)).normalized;
+    //     _rb.velocity = dodgeDirection * dodgeSpeed;
+
+    //     Invoke(nameof(ReturnToPriorState), 0.5f);
+    // }
+
+    private void ApplyConstantMovement()
     {
-        Vector3 direction = (targetPosition - transform.position).normalized;
-        _rb.velocity = new Vector3(direction.x * speed, _rb.velocity.y, direction.z * speed);
+        if (Time.time >= _nextMoveChangeTime)
+        {
+            ChangeConstantMoveDirection();
+        }
+
+        // Apply movement based on the constant move direction
+        transform.Translate(_constantMoveDirection * moveSpeed * Time.fixedDeltaTime);
+
+        Debug.Log($"AI Position: {transform.position}");
     }
 
-    private void DodgeBehavior()
+    private void ChangeConstantMoveDirection()
     {
-        // Side-step with more variability
-        Vector3 dodgeDirection = Vector3.Cross(Vector3.up, (playerTransform.position - transform.position)).normalized;
+        if (pingPongMovement)
+        {
+            // Calculate the distance from the starting position
+            float distanceFromStart = Vector3.Distance(transform.position, _startPosition);
 
-        // Add randomness to dodge movement
-        dodgeDirection += new Vector3(
-            Random.Range(-0.5f, 0.5f),
-            0f,
-            Random.Range(-0.5f, 0.5f)
-        ).normalized;
+            // If AI reaches the move range, toggle direction and reset start position
+            if (distanceFromStart >= moveRange)
+            {
+                _movingRight = !_movingRight; // Toggle direction
+                _startPosition = transform.position; // Reset start position
+            }
 
-        _rb.velocity = dodgeDirection * dodgeSpeed;
+            // Ping pong movement direction
+            _constantMoveDirection = _movingRight 
+                ? new Vector3(1f, 0f, 0f) // Move right
+                : new Vector3(-1f, 0f, 0f); // Move left
+        }
+        else
+        {
+            // Default random movement
+            _constantMoveDirection = new Vector3(
+                Random.Range(-1f, 1f),
+                0f,
+                Random.Range(-1f, 1f)
+            ).normalized;
+        }
 
-        // Revert to prior state after a short time
-        Invoke(nameof(ReturnToPriorState), 0.5f);
+        _nextMoveChangeTime = Time.time + constantMoveChangeInterval;
+        Debug.Log($"AI changed direction: {_constantMoveDirection}, Start Pos: {_startPosition}");
     }
+
     private bool ShouldDodge()
     {
         // Check if the player is holding the ball
         BallController playerHeldBall = playerTransform.GetComponentInChildren<BallController>();
-        if (playerHeldBall == null)
-        {
-            Debug.Log("Player is not holding the ball, no dodge needed.");
-            return false; // Player is not holding the ball
-        }
+        if (playerHeldBall == null) return false;
 
-        // Calculate the distance between the player and the AI
         float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
-        Debug.Log($"Distance to Player: {distanceToPlayer}");
+        Vector3 toAI = (transform.position - playerTransform.position).normalized;
+        float facingDot = Vector3.Dot(playerTransform.forward, toAI);
 
-        if (distanceToPlayer > 13f)
+        if (distanceToPlayer < 5f && facingDot > 0.7f)
         {
-            Debug.Log("Player is too far, no dodge needed.");
-            return false; // Player is too far away
+            return Random.value < 0.8f;
         }
 
-        Debug.Log("ShouldDodge() returned false");
-        return true;
+        return false;
     }
 
     private void ReturnToPriorState()
     {
-        if (_heldBall != null) _currentState = AIState.Attack;
-        else _currentState = AIState.SeekBall;
+        _currentState = _heldBall != null ? AIState.Attack : AIState.SeekBall;
     }
 
     private void ThrowBallAtPlayer()
@@ -171,16 +197,15 @@ public class AIController : MonoBehaviour
         }
     }
 
+    private bool ballRbIsKinematic(BallController ball)
+    {
+        return ball.GetComponent<Rigidbody>().isKinematic;
+    }
+
     public void PickUpBallAtStart(BallController ball)
     {
         _heldBall = ball;
         _heldBall.PickUpByAI(handTransform);
         _currentState = AIState.Attack;
-        Debug.Log("AI picked up the ball (via GameManager).");
-    }
-
-    private bool ballRbIsKinematic(BallController ball)
-    {
-        return ball.GetComponent<Rigidbody>().isKinematic;
     }
 }
