@@ -8,6 +8,7 @@ public class AIController : MonoBehaviour
     [Header("AI Settings")]
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float dodgeSpeed = 6f;
+    [SerializeField] private float repositionRadius = 3f; // Radius for random repositioning
 
     [Header("References")]
     [SerializeField] private Transform playerTransform;   // The player's transform
@@ -48,6 +49,7 @@ public class AIController : MonoBehaviour
         if (ShouldDodge())
         {
             _currentState = AIState.Dodge;
+            Debug.Log("Test");
         }
     }
 
@@ -59,10 +61,15 @@ public class AIController : MonoBehaviour
             return;
         }
 
-        // For simplicity, the AI won't pick up the ball unless it physically collides.
-        // The OnTriggerEnter logic would be needed to auto-pickup. 
-        // You can add that or do a "find ball" approach.
-        _rb.velocity = Vector3.zero;
+        // Random movement
+        Vector3 randomDirection = new Vector3(
+            Random.Range(-1f, 1f),
+            0f,
+            Random.Range(-1f, 1f)
+        ).normalized;
+
+        Vector3 targetPosition = transform.position + randomDirection * 2f; // Move a small distance randomly
+        MoveTowards(targetPosition, moveSpeed);
     }
 
     private void AttackBehavior()
@@ -73,9 +80,12 @@ public class AIController : MonoBehaviour
             return;
         }
 
-        // Face the player, move a bit
+        // Face the player and move toward them slightly
         Vector3 toPlayer = (playerTransform.position - transform.position).normalized;
-        _rb.velocity = new Vector3(toPlayer.x * moveSpeed, _rb.velocity.y, toPlayer.z * moveSpeed);
+        Vector3 repositionOffset = Vector3.Cross(toPlayer, Vector3.up).normalized * Random.Range(-1f, 1f);
+        Vector3 targetPosition = transform.position + repositionOffset;
+
+        MoveTowards(targetPosition, moveSpeed);
 
         // Throw at intervals
         if (Time.time >= _nextThrowTime)
@@ -85,21 +95,51 @@ public class AIController : MonoBehaviour
         }
     }
 
-    private void DodgeBehavior()
+    private void MoveTowards(Vector3 targetPosition, float speed)
     {
-        // Simple side-step
-        Vector3 dodgeDirection = Vector3.Cross(Vector3.up, (playerTransform.position - transform.position)).normalized;
-        _rb.velocity = dodgeDirection * dodgeSpeed;
-
-        // Revert after a short time
-        Invoke(nameof(ReturnToPriorState), 0.5f);
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        _rb.velocity = new Vector3(direction.x * speed, _rb.velocity.y, direction.z * speed);
     }
 
+    private void DodgeBehavior()
+    {
+        // Side-step with more variability
+        Vector3 dodgeDirection = Vector3.Cross(Vector3.up, (playerTransform.position - transform.position)).normalized;
+
+        // Add randomness to dodge movement
+        dodgeDirection += new Vector3(
+            Random.Range(-0.5f, 0.5f),
+            0f,
+            Random.Range(-0.5f, 0.5f)
+        ).normalized;
+
+        _rb.velocity = dodgeDirection * dodgeSpeed;
+
+        // Revert to prior state after a short time
+        Invoke(nameof(ReturnToPriorState), 0.5f);
+    }
     private bool ShouldDodge()
     {
-        // Very simplified logic: Not holding the ball, the player's ball is in flight, etc.
-        // Implementation depends on your preference.
-        return false;  // Stub for demonstration
+        // Check if the player is holding the ball
+        BallController playerHeldBall = playerTransform.GetComponentInChildren<BallController>();
+        if (playerHeldBall == null)
+        {
+            Debug.Log("Player is not holding the ball, no dodge needed.");
+            return false; // Player is not holding the ball
+        }
+
+        // Calculate the distance between the player and the AI
+        float distanceToPlayer = Vector3.Distance(transform.position, playerTransform.position);
+        Debug.Log($"Distance to Player: {distanceToPlayer}");
+
+        if (distanceToPlayer > 13f)
+        {
+            Debug.Log("Player is too far, no dodge needed.");
+            return false; // Player is too far away
+        }
+
+        Debug.Log("ShouldDodge() returned false");
+        return true;
     }
 
     private void ReturnToPriorState()
@@ -122,7 +162,6 @@ public class AIController : MonoBehaviour
         if (other.CompareTag("Ball") && _heldBall == null)
         {
             BallController ball = other.GetComponent<BallController>();
-            // If it's free (not in player's hands), pick it up
             if (!ballRbIsKinematic(ball))
             {
                 _heldBall = ball;
@@ -132,9 +171,6 @@ public class AIController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Called by GameManager at the start or after Player's missed throw
-    /// </summary>
     public void PickUpBallAtStart(BallController ball)
     {
         _heldBall = ball;

@@ -25,8 +25,18 @@ public class PlayerController : MonoBehaviour
         // Movement
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
-        Vector3 movement = new Vector3(moveX, 0, moveZ) * moveSpeed;
+        Vector3 forward = Camera.main.transform.forward;
+        Vector3 right = Camera.main.transform.right;
+
+        forward.y = 0; // Ignore vertical tilt of the camera
+        right.y = 0;
+
+        forward.Normalize();
+        right.Normalize();
+
+        Vector3 movement = (forward * moveZ + right * moveX) * moveSpeed;
         _rb.velocity = new Vector3(movement.x, _rb.velocity.y, movement.z);
+
 
         // Attempt to pick up ball (if in range)
         if (Input.GetKeyDown(pickupKey))
