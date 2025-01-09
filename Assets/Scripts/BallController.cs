@@ -1,25 +1,21 @@
+using System.Collections;
 using UnityEngine;
 
 public class BallController : MonoBehaviour
 {
-    [SerializeField] private float throwForce = 10f;
-    [SerializeField] private float spinForce = 5f; // Amount of spin applied during throw
-    [SerializeField] private float minThrowForceMultiplier = 0.8f;
-    [SerializeField] private float maxThrowForceMultiplier = 1.2f;
+    [SerializeField] private float throwForce = 15f;
     [SerializeField] private float minHitVelocity = 3f;
     [SerializeField] private float throwTimeout = 2f;
 
     private Rigidbody _rb;
-
-    private bool _isHeldByPlayer;
-    private bool _isHeldByAI;
-    private Transform _holderTransform;
-
-    private bool _wasPlayerLastThrow;
-    private bool _hasHitOnThisThrow;
+    private bool _isHeld;
+    private BaseCharacterController _currentHolder;
 
     private float _throwTimer;
     private bool _throwTimerActive;
+    private bool _hasHitOnThisThrow;
+    private bool _isInMotion = false; // Track if ball is in motion
+    private BaseCharacterController _lastHolder;
 
     private void Awake()
     {
@@ -28,109 +24,83 @@ public class BallController : MonoBehaviour
 
     private void Update()
     {
-        if (_isHeldByPlayer || _isHeldByAI)
-        {
-            transform.position = _holderTransform.position;
-        }
-
         if (_throwTimerActive)
         {
             _throwTimer -= Time.deltaTime;
             if (_throwTimer <= 0f && !_hasHitOnThisThrow)
             {
                 _throwTimerActive = false;
-                GameManager.Instance.UnsuccessfulThrow(_wasPlayerLastThrow);
+                // Handle missed throw: reassign ball to the other team
+                StartCoroutine(DelayBallAssignment());
             }
         }
     }
 
-    public void PickUpByPlayer(Transform holder)
+    public void PickUpByPlayerOrAI(Transform holderTransform, BaseCharacterController holder)
     {
-        ResetThrowState();
-        _isHeldByPlayer = true;
-        _isHeldByAI = false;
+        _isHeld = true;
+        _currentHolder = holder;
+        _lastHolder = holder; // Update last holder
+
         _rb.isKinematic = true;
-        _holderTransform = holder;
-    }
-
-    public void PickUpByAI(Transform holder)
-    {
-        ResetThrowState();
-        _isHeldByAI = true;
-        _isHeldByPlayer = false;
-        _rb.isKinematic = true;
-        _holderTransform = holder;
-    }
-
-    public void ThrowBall(Vector3 direction, bool thrownByPlayer)
-    {
-        _wasPlayerLastThrow = thrownByPlayer;
-        _hasHitOnThisThrow = false;
-
-        _isHeldByPlayer = false;
-        _isHeldByAI = false;
-        _rb.isKinematic = false;
-        _holderTransform = null;
-
         _rb.velocity = Vector3.zero;
 
-        float randomMultiplier = Random.Range(minThrowForceMultiplier, maxThrowForceMultiplier);
-        Vector3 force = direction * throwForce * randomMultiplier;
+        transform.SetParent(holderTransform);
+        transform.localPosition = Vector3.zero;
+        transform.localRotation = Quaternion.identity;
 
-        // Add spin (Magnus effect simulation)
-        Vector3 spin = Vector3.Cross(force.normalized, Vector3.up) * spinForce;
+        _hasHitOnThisThrow = false;
+        _throwTimerActive = false;
+    }
 
-        _rb.AddForce(force, ForceMode.Impulse);
-        _rb.AddTorque(spin, ForceMode.Impulse);
+    public void ThrowBall(Vector3 direction)
+    {
+        if (!_isHeld || _currentHolder == null) return;
+
+        _isHeld = false;
+        transform.SetParent(null);
+
+        _rb.isKinematic = false;
+        _rb.velocity = Vector3.zero;
+        _rb.AddForce(direction * throwForce, ForceMode.Impulse);
 
         _throwTimer = throwTimeout;
         _throwTimerActive = true;
+        _isInMotion = true; // Ball is now in motion
+
+        // Let the holder know they lost the ball
+        _currentHolder.OnBallLost();
+        _currentHolder = null;
     }
 
-     public void ResetBallState()
+    public BaseCharacterController GetLastHolder()
     {
-        // Reset Rigidbody properties
-        _rb.velocity = Vector3.zero;
-        _rb.angularVelocity = Vector3.zero;
-        _rb.isKinematic = true;
-
-        // Reset holding states
-        _isHeldByPlayer = false;
-        _isHeldByAI = false;
-        _holderTransform = null;
-
-        // Reset throw-related variables
-        _wasPlayerLastThrow = false;
-        _hasHitOnThisThrow = false;
-        _throwTimerActive = false;
-        _throwTimer = 0f;
-
-        // Position ball in a neutral or initial state (optional)
-        transform.position = Vector3.zero; // Adjust as needed
+        return _lastHolder;
     }
 
     private void OnCollisionEnter(Collision collision)
     {
         if (_rb.velocity.magnitude < minHitVelocity) return;
 
-        if (collision.gameObject.CompareTag("Player"))
+        BaseCharacterController hitCharacter = collision.gameObject.GetComponent<BaseCharacterController>();
+        if (hitCharacter != null)
         {
             _hasHitOnThisThrow = true;
-            GameManager.Instance.PlayerHit();
             _throwTimerActive = false;
+
+            GameManager.Instance.OnPlayerHit(hitCharacter);
+
+            // Reassign the ball after a delay to prevent instant reassignment
+            StartCoroutine(DelayBallAssignment());
         }
-        else if (collision.gameObject.CompareTag("AI"))
-        {
-            _hasHitOnThisThrow = true;
-            GameManager.Instance.AIHit();
-            _throwTimerActive = false;
-        }
+
+        _isInMotion = false; // Ball is no longer in motion
     }
 
-    private void ResetThrowState()
+    // Wait before assigning the ball to the next team
+    private IEnumerator DelayBallAssignment()
     {
-        _throwTimerActive = false;
-        _throwTimer = 0f;
-        _hasHitOnThisThrow = false;
+        yield return new WaitForSeconds(1f); // Add a delay
+        GameManager.Instance.ReassignBallToOppositeTeam();
     }
 }

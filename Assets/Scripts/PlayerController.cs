@@ -1,19 +1,15 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : BaseCharacterController
 {
-    [Header("Movement Settings")]
+    [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
-    
-    [Header("Ball Interaction")]
-    [SerializeField] private Transform handTransform;   // "Hand" for holding the ball
-    [SerializeField] private KeyCode pickupKey = KeyCode.E;
     [SerializeField] private KeyCode throwKey = KeyCode.Space;
+    [SerializeField] private KeyCode passKey = KeyCode.LeftShift;
 
     private Rigidbody _rb;
-    private BallController _ballInRange;   
-    private BallController _heldBall;      
+    private Vector3 _movement;
 
     private void Awake()
     {
@@ -22,74 +18,55 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // Movement
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
-        Vector3 forward = Camera.main.transform.forward;
-        Vector3 right = Camera.main.transform.right;
+        _movement = new Vector3(moveX, 0, moveZ) * moveSpeed;
 
-        forward.y = 0; // Ignore vertical tilt of the camera
-        right.y = 0;
-
-        forward.Normalize();
-        right.Normalize();
-
-        Vector3 movement = (forward * moveZ + right * moveX) * moveSpeed;
-        _rb.velocity = new Vector3(movement.x, _rb.velocity.y, movement.z);
-
-
-        // Attempt to pick up ball (if in range)
-        if (Input.GetKeyDown(pickupKey))
+        if (_heldBall != null)
         {
-            TryPickUpBall();
-        }
-
-        // Throw the ball if we have it
-        if (_heldBall != null && Input.GetKeyDown(throwKey))
-        {
-            // Example: throw forward relative to player's facing direction
-            Vector3 throwDirection = transform.forward;
-
-            _heldBall.ThrowBall(throwDirection, true); 
-            _heldBall = null;
-        }
-    }
-
-    private void TryPickUpBall()
-    {
-        if (_ballInRange != null && _heldBall == null)
-        {
-            _heldBall = _ballInRange;
-            _heldBall.PickUpByPlayer(handTransform);
-        }
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Ball"))
-        {
-            _ballInRange = other.GetComponent<BallController>();
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.CompareTag("Ball"))
-        {
-            if (_ballInRange == other.GetComponent<BallController>())
+            if (Input.GetKeyDown(throwKey))
             {
-                _ballInRange = null;
+                // Throw forward
+                Vector3 throwDir = transform.forward;
+                _heldBall.ThrowBall(throwDir);
+            }
+            else if (Input.GetKeyDown(passKey))
+            {
+                // Pass to nearest teammate
+                BaseCharacterController teammate = FindNearestTeammate();
+                if (teammate != null)
+                {
+                    Vector3 passDir = (teammate.transform.position - transform.position).normalized;
+                    _heldBall.ThrowBall(passDir);
+                }
             }
         }
     }
 
-    /// <summary>
-    /// Called by GameManager at the start or after AI's unsuccessful throw
-    /// </summary>
-    public void PickUpBallAtStart(BallController ball)
+    private void FixedUpdate()
     {
-        _heldBall = ball;
-        _heldBall.PickUpByPlayer(handTransform);
-        Debug.Log("Player picked up the ball (via GameManager).");
+        // Move in FixedUpdate
+        _rb.velocity = new Vector3(_movement.x, _rb.velocity.y, _movement.z);
+    }
+
+    private BaseCharacterController FindNearestTeammate()
+    {
+        // Same logic as before
+        float closestDist = Mathf.Infinity;
+        BaseCharacterController nearest = null;
+        var allChars = FindObjectsOfType<BaseCharacterController>();
+        foreach (var c in allChars)
+        {
+            if (c == this) continue;
+            if (c.teamID != this.teamID) continue;
+
+            float dist = Vector3.Distance(transform.position, c.transform.position);
+            if (dist < closestDist)
+            {
+                closestDist = dist;
+                nearest = c;
+            }
+        }
+        return nearest;
     }
 }
