@@ -6,7 +6,7 @@ using System.Collections.Generic;
 public class CharacterAIController : BaseCharacterController
 {
     // We only keep these three states for now:
-    private enum AIState { SideSteps, Attack, Pass }
+    private enum AIState { SideSteps, Attack }
 
     [Header("Movement/Throw Settings")]
     [SerializeField] private float moveSpeed = 4f;
@@ -71,9 +71,9 @@ public class CharacterAIController : BaseCharacterController
             case AIState.Attack:
                 AttackBehavior();
                 break;
-            case AIState.Pass:
-                PassBehavior();
-                break;
+            // case AIState.Pass:
+            //     PassBehavior();
+            //     break;
         }
     }
 
@@ -89,7 +89,7 @@ public class CharacterAIController : BaseCharacterController
             if (Time.time >= _sideTimer)
             {
                 if (Random.value < 0.5f) _currentState = AIState.Attack;
-                else _currentState = AIState.Pass;
+                else _currentState = AIState.SideSteps;
                 return; // Exit here so we don't also do a side-step this frame
             }
         }
@@ -163,43 +163,43 @@ public class CharacterAIController : BaseCharacterController
     // ----------------------------------------
     //  Pass Behavior
     // ----------------------------------------
-    private void PassBehavior()
-    {
-        if (_heldBall == null)
-        {
-            _currentState = AIState.SideSteps;
-            return;
-        }
+    // private void PassBehavior()
+    // {
+    //     if (_heldBall == null)
+    //     {
+    //         _currentState = AIState.SideSteps;
+    //         return;
+    //     }
 
-        // Find nearest teammate
-        BaseCharacterController mate = FindNearestTeammate();
-        if (mate != null)
-        {
-            Vector3 targetPosition = mate.transform.position;
-            SetDestination(targetPosition);
+    //     // Find nearest teammate
+    //     BaseCharacterController mate = FindNearestTeammate();
+    //     if (mate != null)
+    //     {
+    //         Vector3 targetPosition = mate.transform.position;
+    //         SetDestination(targetPosition);
 
-            if (Time.time >= _nextThrowTime)
-            {
-                _heldBall.ThrowBall((targetPosition - transform.position).normalized);
+    //         if (Time.time >= _nextThrowTime)
+    //         {
+    //             _heldBall.ThrowBall((targetPosition - transform.position).normalized);
 
-                // Passing is effectively a "hit" => same team
-                ReassignBall(true);
+    //             // Passing is effectively a "hit" => same team
+    //             ReassignBall(true);
 
-                _nextThrowTime = Time.time + throwCooldown;
-            }
-        }
-        else
-        {
-            // No teammate => fallback to Attack
-            _currentState = AIState.Attack;
-        }
+    //             _nextThrowTime = Time.time + throwCooldown;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         // No teammate => fallback to Attack
+    //         _currentState = AIState.Attack;
+    //     }
 
-        // If we lost the ball after reassign, go back to side-step
-        if (_heldBall == null)
-        {
-            _currentState = AIState.SideSteps;
-        }
-    }
+    //     // If we lost the ball after reassign, go back to side-step
+    //     if (_heldBall == null)
+    //     {
+    //         _currentState = AIState.SideSteps;
+    //     }
+    // }
 
     // ----------------------------------------
     //  Movement Helpers
