@@ -66,7 +66,6 @@
   <ItemGroup>
     <Compile Include="Assets/Scripts/CharacterAIController.cs" />
     <Compile Include="Assets/Scripts/BallController.cs" />
-    <Compile Include="Assets/CourtDebugger.cs" />
     <Compile Include="Assets/Testas.cs" />
     <Compile Include="Assets/Scripts/GameManager.cs" />
     <Compile Include="Assets/Scripts/PlayerController.cs" />
@@ -931,8 +930,8 @@
     <ProjectReference Include="Unity.Rider.Editor.csproj" />
     <ProjectReference Include="Unity.AI.Navigation.Editor.csproj" />
     <ProjectReference Include="Unity.VisualScripting.State.csproj" />
-    <ProjectReference Include="Unity.VSCode.Editor.csproj" />
     <ProjectReference Include="Unity.AI.Navigation.Editor.ConversionSystem.csproj" />
+    <ProjectReference Include="Unity.VSCode.Editor.csproj" />
     <ProjectReference Include="Unity.VisualScripting.Flow.csproj" />
     <ProjectReference Include="Unity.VisualScripting.Flow.Editor.csproj" />
   </ItemGroup>
