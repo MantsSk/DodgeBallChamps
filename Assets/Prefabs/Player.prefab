@@ -124,6 +124,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   teamID: 0
   handTransform: {fileID: 2860776555587922726}
+  initialSpawnPosition: {x: 0, y: 0, z: 0}
   moveSpeed: 5
   throwKey: 32
   passKey: 304
@@ -152,7 +153,7 @@ Rigidbody:
   m_UseGravity: 1
   m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 112
+  m_Constraints: 80
   m_CollisionDetection: 0
 --- !u!1 &6437023483594669362
 GameObject:

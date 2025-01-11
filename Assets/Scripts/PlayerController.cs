@@ -18,15 +18,28 @@ public class PlayerController : BaseCharacterController
 
     private void Update()
     {
+        // Get input
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
-        _movement = new Vector3(moveX, 0, moveZ) * moveSpeed;
+
+        // Align movement with the camera's forward direction
+        Vector3 forward = Camera.main.transform.forward;
+        Vector3 right = Camera.main.transform.right;
+
+        // Flatten the vectors to ignore vertical camera tilt
+        forward.y = 0f;
+        right.y = 0f;
+        forward.Normalize();
+        right.Normalize();
+
+        // Combine the input direction with camera orientation
+        _movement = (forward * moveZ + right * moveX) * moveSpeed;
 
         if (_heldBall != null)
         {
             if (Input.GetKeyDown(throwKey))
             {
-                // Throw forward
+                // Throw forward relative to the player
                 Vector3 throwDir = transform.forward;
                 _heldBall.ThrowBall(throwDir);
             }

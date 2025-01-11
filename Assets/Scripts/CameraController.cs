@@ -1,10 +1,6 @@
 using UnityEngine;
 
-public class CameraController : MonoBehaviour
-{
-    [Header("Camera Target")]
-    [SerializeField] private Transform playerTransform; 
-    // The Player we want to follow; drag the Player's transform here in the Inspector.
+public class CameraController : MonoBehaviour{
 
     [Header("Camera Positioning")]
     [SerializeField] private Vector3 offset = new Vector3(0, 10f, -5f);
@@ -19,12 +15,12 @@ public class CameraController : MonoBehaviour
     [SerializeField] private bool lookAtPlayer = true;
     // If true, the camera will tilt/rotate to face the player.
 
-    private void LateUpdate()
+    public void SetCameraTarget(GameObject playerTransform)
     {
         if (playerTransform == null) return;
 
         // Desired camera position = player's position + offset
-        Vector3 desiredPosition = playerTransform.position + offset;
+        Vector3 desiredPosition = playerTransform.transform.position + offset;
 
         // Smoothly interpolate from current position to desired position
         Vector3 smoothedPosition = Vector3.Lerp(transform.position, desiredPosition, followSpeed);
@@ -33,7 +29,8 @@ public class CameraController : MonoBehaviour
         // Optionally rotate to look at the player
         if (lookAtPlayer)
         {
-            transform.LookAt(playerTransform.position);
+            transform.LookAt(playerTransform.transform.position);
+            Debug.Log("Camera is looking at player");
         }
     }
 }
