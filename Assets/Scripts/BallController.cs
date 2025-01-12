@@ -6,6 +6,8 @@ public class BallController : MonoBehaviour
     [SerializeField] private float throwForce = 15f;
     [SerializeField] private float minHitVelocity = 3f;
     [SerializeField] private float throwTimeout = 2f;
+    [SerializeField] private float maxCatchableSpeed = 10f;
+    public float MaxCatchableSpeed => maxCatchableSpeed;
 
     private Rigidbody _rb;
     private bool _isHeld;
@@ -96,6 +98,19 @@ public class BallController : MonoBehaviour
 
         _isInMotion = false; // Ball is no longer in motion
     }
+
+
+    public float GetSpeed()
+    {
+        return _rb.velocity.magnitude;
+    }
+
+
+    public bool IsInMotion()
+    {
+        return _isInMotion;
+    }
+
 
     // Wait before assigning the ball to the next team
     private IEnumerator DelayBallAssignment()

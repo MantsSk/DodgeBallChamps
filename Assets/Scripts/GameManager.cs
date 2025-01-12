@@ -70,47 +70,27 @@ public class GameManager : MonoBehaviour
     {
         int count = Mathf.Min(playersPerTeam, spawnPoints.Length);
 
-        // Determine the opposing team's spawn center
-        Vector3 opposingTeamCenter = (teamID == 0) ? GetSpawnCenter(teamBSpawnPoints) : GetSpawnCenter(teamASpawnPoints);
-
         for (int i = 0; i < count; i++)
         {
-            // Decide if this spawn is human or AI.
-            // For example, Team A's first slot might be the Player, rest are AI.
-            bool isHuman = (teamID == 0 && i == 0);
+            bool isHuman = (teamID == 0 && i == 0); // Team A's first player is human
             GameObject prefab = isHuman ? playerPrefab : aiPrefab;
 
-            // Instantiate at the spawn point
             Transform spawnPoint = spawnPoints[i];
-            GameObject characterObj = Instantiate(prefab, spawnPoint.position, Quaternion.identity);
+            GameObject characterObj = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
 
-            // Rotate to face the opposing team's center
-            Vector3 directionToFace = (opposingTeamCenter - spawnPoint.position).normalized;
-            if (directionToFace != Vector3.zero)
+            // Rotate friendly AI by -180 degrees for Team 1
+            if (teamID == 1)
             {
-                characterObj.transform.rotation = Quaternion.LookRotation(directionToFace);
+                characterObj.transform.rotation = Quaternion.Euler(0, 180, 0);
             }
 
-            // Get the controller, assign team ID
             BaseCharacterController controller = characterObj.GetComponent<BaseCharacterController>();
             controller.teamID = teamID;
             teamList.Add(controller);
 
-            Debug.Log($"Spawned {(isHuman ? "Player" : "AI")} at {spawnPoint.position} for Team {teamID}");
+            Debug.Log($"Spawned {(isHuman ? "Player" : "AI")} at {spawnPoint.position} for Team {teamID}, rotation: {characterObj.transform.rotation.eulerAngles}");
         }
     }
-
-    // Helper method to calculate the center of spawn points
-    private Vector3 GetSpawnCenter(Transform[] spawnPoints)
-    {
-        Vector3 center = Vector3.zero;
-        foreach (var point in spawnPoints)
-        {
-            center += point.position;
-        }
-        return center / spawnPoints.Length;
-    }
-
 
     public void OnPlayerHit(BaseCharacterController hitCharacter)
     {

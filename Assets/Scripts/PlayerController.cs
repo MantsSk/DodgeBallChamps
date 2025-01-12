@@ -54,7 +54,33 @@ public class PlayerController : BaseCharacterController
                 }
             }
         }
+
+        if (Input.GetKeyDown(catchKey))
+        {
+            TryCatchBall();
+        }
     }
+
+    [SerializeField] private KeyCode catchKey = KeyCode.F; // Default catch key
+
+    private void TryCatchBall()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, 5.5f); // Catch radius
+        foreach (var collider in hitColliders)
+        {
+            if (collider.CompareTag("Ball"))
+            {
+                BallController ball = collider.GetComponent<BallController>();
+                if (ball != null && !ball.IsInMotion() && AttemptCatch(ball))
+                {
+                    Debug.Log("Player caught the ball!");
+                    return;
+                }
+            }
+        }
+        Debug.Log("Player failed to catch the ball!");
+    }
+
 
     private void FixedUpdate()
     {

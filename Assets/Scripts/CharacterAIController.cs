@@ -44,8 +44,11 @@ public class CharacterAIController : BaseCharacterController
         }
     }
 
+    private Quaternion _baseRotation; // AI's initial spawn rotation
+
     private void Start()
     {
+        _baseRotation = transform.rotation; // Save the AI's initial rotation
         // Optional: Give this AI the ball at the start if you want to see them shoot right away.
         // (e.g. only team 0 gets the ball at start)
         if (teamID == 0)
@@ -59,6 +62,11 @@ public class CharacterAIController : BaseCharacterController
 
         // Start in side-steps
         _currentState = AIState.SideSteps;
+    }
+
+    private void Update() 
+    {
+        LookForAndCatchBall();
     }
 
     private void FixedUpdate()
@@ -77,51 +85,73 @@ public class CharacterAIController : BaseCharacterController
         }
     }
 
+
+    private void LookForAndCatchBall()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, 1.5f); // Catch radius
+        foreach (var collider in hitColliders)
+        {
+            if (collider.CompareTag("Ball"))
+            {
+                BallController ball = collider.GetComponent<BallController>();
+                if (ball != null && !ball.IsInMotion())
+                {
+                    bool didCatch = AttemptCatch(ball);
+                    Debug.Log(didCatch ? "AI caught the ball!" : "AI failed to catch the ball.");
+                }
+            }
+        }
+    }
+
+
     // ----------------------------------------
     //  SideSteps Behavior
     // ----------------------------------------
     private void SideStepsBehavior()
     {
-        // If we have the ball, let's randomly choose Attack or Pass occasionally
         if (_heldBall != null)
         {
-            // For example, every time we flip direction, we might choose a new state
-            if (Time.time >= _sideTimer)
-            {
-                if (Random.value < 0.5f) _currentState = AIState.Attack;
-                else _currentState = AIState.SideSteps;
-                return; // Exit here so we don't also do a side-step this frame
-            }
+            _currentState = AIState.Attack; // Switch to attack if holding the ball
+            return;
         }
 
-        // Time to flip side direction?
+        // Time to flip the sidestep direction?
         if (Time.time >= _sideTimer)
         {
             _sideTimer = Time.time + sideInterval;
             _sideDirection *= -1f;
+
+            // Calculate sidestep target based on base rotation and side direction
+            Vector3 sidestepOffset = _baseRotation * Vector3.right * _sideDirection * sideDistance;
+            Vector3 sidestepTarget = transform.position + sidestepOffset;
+
+            // Ensure the sidestep target is valid on the NavMesh
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(sidestepTarget, out hit, sideDistance, NavMesh.AllAreas))
+            {
+                _navAgent.SetDestination(hit.position);
+            }
         }
 
-        // Move sideways
-        Vector3 offset = transform.right * _sideDirection * sideDistance;
-        Vector3 nextPos = transform.position + offset;
-
-        NavMeshHit hit;
-        if (NavMesh.SamplePosition(nextPos, out hit, sideDistance, NavMesh.AllAreas))
+        // Rotate the AI to match sidestep direction only when moving
+        if (_navAgent.velocity.sqrMagnitude > 0.1f)
         {
-            _navAgent.SetDestination(hit.position);
+            transform.rotation = Quaternion.Slerp(transform.rotation, _baseRotation, Time.deltaTime * 10f);
         }
-
-        // Prevent the character from rotating due to pathfinding.
-        // We'll just face "forward" or do nothing for rotation.
-        transform.rotation = Quaternion.identity;
+        else
+        {
+            // Keep the AI facing forward relative to the base rotation
+            transform.rotation = _baseRotation;
+        }
     }
+
+
 
     // ----------------------------------------
     //  Attack Behavior
     // ----------------------------------------
     private void AttackBehavior()
     {
-        // If we don't have the ball, go back to side-step
         if (_heldBall == null)
         {
             _currentState = AIState.SideSteps;
@@ -132,8 +162,7 @@ public class CharacterAIController : BaseCharacterController
         BaseCharacterController nearestOpponent = FindNearestOpponent();
         if (nearestOpponent == null)
         {
-            // No opponents? Side-step
-            _currentState = AIState.SideSteps;
+            _currentState = AIState.SideSteps; // No valid target
             return;
         }
 
@@ -144,21 +173,18 @@ public class CharacterAIController : BaseCharacterController
         // Throw if cooldown is ready
         if (Time.time >= _nextThrowTime)
         {
-            _heldBall.ThrowBall((targetPosition - transform.position).normalized);
+            Vector3 throwDirection = (targetPosition - transform.position).normalized;
+            _heldBall.ThrowBall(throwDirection);
 
-            // 50% chance "hit" or "miss"
-            bool didHit = Random.value < 0.5f;
-            ReassignBall(didHit);
+            // Log throw action
+            Debug.Log($"AI on Team {teamID} threw the ball at {nearestOpponent.name}");
 
+            // Reset cooldown and reassign ball
             _nextThrowTime = Time.time + throwCooldown;
-        }
-
-        // If we lost the ball after reassign, go back to side-step
-        if (_heldBall == null)
-        {
-            _currentState = AIState.SideSteps;
+            ReassignBall(false); // Assume missed shot for simplicity
         }
     }
+
 
     // ----------------------------------------
     //  Pass Behavior
