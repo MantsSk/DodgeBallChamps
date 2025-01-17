@@ -44,11 +44,11 @@ public class CharacterAIController : BaseCharacterController
         }
     }
 
-    private Quaternion _baseRotation; // AI's initial spawn rotation
+    // private Quaternion _baseRotation; // AI's initial spawn rotation
 
     private void Start()
     {
-        _baseRotation = transform.rotation; // Save the AI's initial rotation
+        // _baseRotation = transform.rotation; // Save the AI's initial rotation
         // Optional: Give this AI the ball at the start if you want to see them shoot right away.
         // (e.g. only team 0 gets the ball at start)
         if (teamID == 0)
@@ -122,7 +122,7 @@ public class CharacterAIController : BaseCharacterController
             _sideDirection *= -1f;
 
             // Calculate sidestep target based on base rotation and side direction
-            Vector3 sidestepOffset = _baseRotation * Vector3.right * _sideDirection * sideDistance;
+            Vector3 sidestepOffset = Vector3.right * _sideDirection * sideDistance;
             Vector3 sidestepTarget = transform.position + sidestepOffset;
 
             // Ensure the sidestep target is valid on the NavMesh
@@ -133,16 +133,16 @@ public class CharacterAIController : BaseCharacterController
             }
         }
 
-        // Rotate the AI to match sidestep direction only when moving
-        if (_navAgent.velocity.sqrMagnitude > 0.1f)
-        {
-            transform.rotation = Quaternion.Slerp(transform.rotation, _baseRotation, Time.deltaTime * 10f);
-        }
-        else
-        {
-            // Keep the AI facing forward relative to the base rotation
-            transform.rotation = _baseRotation;
-        }
+        // // Rotate the AI to match sidestep direction only when moving
+        // if (_navAgent.velocity.sqrMagnitude > 0.1f)
+        // {
+        //     transform.rotation = Quaternion.Slerp(transform.rotation, _baseRotation, Time.deltaTime * 10f);
+        // }
+        // else
+        // {
+        //     // Keep the AI facing forward relative to the base rotation
+        //     transform.rotation = _baseRotation;
+        // }
     }
 
 

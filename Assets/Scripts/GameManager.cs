@@ -78,12 +78,6 @@ public class GameManager : MonoBehaviour
             Transform spawnPoint = spawnPoints[i];
             GameObject characterObj = Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
 
-            // Rotate friendly AI by -180 degrees for Team 1
-            if (teamID == 1)
-            {
-                characterObj.transform.rotation = Quaternion.Euler(0, 180, 0);
-            }
-
             BaseCharacterController controller = characterObj.GetComponent<BaseCharacterController>();
             controller.teamID = teamID;
             teamList.Add(controller);
