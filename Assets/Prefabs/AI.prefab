@@ -43,9 +43,9 @@ GameObject:
   - component: {fileID: 5742781585615649806}
   - component: {fileID: 8880173824206675143}
   - component: {fileID: 7154697324146336036}
-  - component: {fileID: 4590380667742618736}
   - component: {fileID: 5465562640886442781}
   - component: {fileID: 9115055144814043650}
+  - component: {fileID: -5384388661620446802}
   m_Layer: 0
   m_Name: AI
   m_TagString: AI
@@ -142,33 +142,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &4590380667742618736
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2245756340970240734}
-  serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 0
-  m_Constraints: 80
-  m_CollisionDetection: 0
 --- !u!114 &5465562640886442781
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -185,10 +158,19 @@ MonoBehaviour:
   handTransform: {fileID: 700664155906106943}
   initialSpawnPosition: {x: 0, y: 0, z: 0}
   catchRadius: 2
-  moveSpeed: 4
+  throwDelayAfterPickup: 1
+  moveSpeed: 10
+  ballSearchRadius: 15
+  positioningRange: 8
+  repositionInterval: 4
+  enableIdleSway: 1
+  swayAmplitude: 0.5
+  swaySpeed: 1
   throwCooldown: 2
-  sideDistance: 2
-  sideInterval: 2
+  threatDistance: 12
+  avoidDistance: 5
+  inboundCatchDistance: 2
+  inboundAngleThreshold: 15
 --- !u!195 &9115055144814043650
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -211,3 +193,29 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
+--- !u!143 &-5384388661620446802
+CharacterController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2245756340970240734}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}

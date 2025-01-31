@@ -690,7 +690,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Size: {x: 40, y: 10, z: 50}
   m_Center: {x: 1, y: 1, z: 1}
-  m_Area: 4
+  m_Area: 3
   m_AffectedAgents: ffffffff
 --- !u!1 &1052366154
 GameObject:
@@ -1035,7 +1035,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Size: {x: 40, y: 10, z: 50}
   m_Center: {x: 1, y: 1, z: 1}
-  m_Area: 3
+  m_Area: 4
   m_AffectedAgents: ffffffff
 --- !u!1 &1545280272
 GameObject:
