@@ -45,7 +45,6 @@ GameObject:
   - component: {fileID: 7154697324146336036}
   - component: {fileID: 5465562640886442781}
   - component: {fileID: 9115055144814043650}
-  - component: {fileID: -5384388661620446802}
   m_Layer: 0
   m_Name: AI
   m_TagString: AI
@@ -171,6 +170,7 @@ MonoBehaviour:
   avoidDistance: 5
   inboundCatchDistance: 2
   inboundAngleThreshold: 15
+  maxHoardedBalls: 3
 --- !u!195 &9115055144814043650
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -193,29 +193,3 @@ NavMeshAgent:
   m_BaseOffset: 1
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!143 &-5384388661620446802
-CharacterController:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2245756340970240734}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Height: 2
-  m_Radius: 0.5
-  m_SlopeLimit: 45
-  m_StepOffset: 0.3
-  m_SkinWidth: 0.08
-  m_MinMoveDistance: 0.001
-  m_Center: {x: 0, y: 0, z: 0}

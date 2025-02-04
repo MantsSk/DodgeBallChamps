@@ -1,66 +1,75 @@
 using UnityEngine;
 
-[RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerController : BaseCharacterController
 {
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private KeyCode throwKey = KeyCode.Space;
     [SerializeField] private KeyCode passKey = KeyCode.LeftShift;
-    [SerializeField] private KeyCode catchKey = KeyCode.F;
+    [SerializeField] private KeyCode catchKey = KeyCode.F;  // used for catching thrown balls
 
-    private CharacterController _charController;
-    
-    // We'll store our desired movement vector here each frame
+    private Rigidbody _rb;
     private Vector3 _movement;
 
     private void Awake()
     {
-        // Get the CharacterController on this GameObject
-        _charController = GetComponent<CharacterController>();
+        _rb = GetComponent<Rigidbody>();
+        // Optionally freeze rotation so the physics simulation doesn't rotate your player unexpectedly.
+        _rb.freezeRotation = true;
+    }
+
+    /// <summary>
+    /// On collision, if the ball is on the ground, automatically take it.
+    /// (This represents "taking the ball" by touching it.)
+    /// </summary>
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.CompareTag("Ball"))
+        {
+            BallController ball = collision.gameObject.GetComponent<BallController>();
+            // Automatically take the ball if it is on the ground (not in motion) and not already held.
+            if (ball != null && _heldBall == null && !ball.IsInMotion())
+            {
+                Debug.Log("Player takes the ball by touching it on the ground.");
+                CatchBall(ball);
+            }
+        }
     }
 
     private void Update()
     {
         HandleMovementInput();
         HandleThrowInput();
-        HandleCatchInput();
+        HandleCatchInput(); // For thrown ball catch
     }
 
     private void HandleMovementInput()
     {
-        // Basic WASD/Arrow input
         float moveX = Input.GetAxis("Horizontal");
         float moveZ = Input.GetAxis("Vertical");
 
-        // Align movement with the camera's forward direction (if applicable)
+        // Align movement with the camera's forward direction.
         Vector3 forward = Camera.main.transform.forward;
-        Vector3 right   = Camera.main.transform.right;
-
-        // Flatten the vectors so we ignore vertical camera tilt
+        Vector3 right = Camera.main.transform.right;
         forward.y = 0f;
-        right.y   = 0f;
+        right.y = 0f;
         forward.Normalize();
         right.Normalize();
-
-        // Combine the input with camera orientation
         _movement = (forward * moveZ + right * moveX) * moveSpeed;
     }
 
     private void HandleThrowInput()
     {
-        // If we currently hold the ball, check for throw or pass
         if (_heldBall != null)
         {
             if (Input.GetKeyDown(throwKey))
             {
-                // Throw forward relative to the player's transform
                 Vector3 throwDir = transform.forward;
                 _heldBall.ThrowBall(throwDir);
             }
             else if (Input.GetKeyDown(passKey))
             {
-                // Pass to nearest teammate
                 BaseCharacterController teammate = FindNearestTeammate();
                 if (teammate != null)
                 {
@@ -71,51 +80,44 @@ public class PlayerController : BaseCharacterController
         }
     }
 
+    /// <summary>
+    /// When the catch key (F) is pressed, try to catch a thrown ball.
+    /// (This is the "catch" action, which is only for thrown balls.)
+    /// </summary>
     private void HandleCatchInput()
     {
-        // Press a key to attempt a manual catch
         if (Input.GetKeyDown(catchKey))
         {
-            TryCatchBall();
+            TryCatchThrownBall();
         }
     }
 
     private void FixedUpdate()
     {
-        // CharacterControllers typically move in Update or LateUpdate,
-        // but if your game logic depends on physics timing, you can do it here.
-        // We'll do it in FixedUpdate as in your example.
-
-        Vector3 displacement = _movement * Time.fixedDeltaTime;
-
-        // If needed, apply simple gravity:
-        // displacement.y += Physics.gravity.y * Time.fixedDeltaTime;
-
-        _charController.Move(displacement);
+        // Apply horizontal movement while preserving vertical velocity (gravity).
+        Vector3 currentVelocity = _rb.velocity;
+        Vector3 desiredVelocity = new Vector3(_movement.x, currentVelocity.y, _movement.z);
+        _rb.velocity = desiredVelocity;
     }
 
     /// <summary>
-    /// Check for a stationary ball in range when the player presses F,
-    /// and catch it if found.
+    /// Try to catch a ball that is in motion (thrown at you).
     /// </summary>
-    private void TryCatchBall()
+    private void TryCatchThrownBall()
     {
-        // OverlapSphere to detect a ball within 'catchRadius'
+        // Only consider balls that are in motion (i.e. thrown).
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, catchRadius);
         bool caught = false;
-
         foreach (var collider in hitColliders)
         {
             if (collider.CompareTag("Ball"))
             {
                 BallController ball = collider.GetComponent<BallController>();
-                // If the ball is valid, not already held, and not in motion (your existing logic)
-                if (ball != null && _heldBall == null && !ball.IsInMotion())
+                if (ball != null && _heldBall == null && ball.IsInMotion())
                 {
-                    // Call AttemptCatch (overridden version for the Player)
                     if (AttemptCatch(ball))
                     {
-                        Debug.Log("Player caught the ball!");
+                        Debug.Log("Player caught the thrown ball!");
                         CatchBall(ball);
                         caught = true;
                         break;
@@ -123,27 +125,19 @@ public class PlayerController : BaseCharacterController
                 }
             }
         }
-
         if (!caught)
-        {
-            Debug.Log("No ball caught!");
-        }
+            Debug.Log("No thrown ball caught!");
     }
 
-    /// <summary>
-    /// Find the nearest teammate to pass the ball.
-    /// </summary>
     private BaseCharacterController FindNearestTeammate()
     {
         float closestDist = Mathf.Infinity;
         BaseCharacterController nearest = null;
-        var allChars = FindObjectsOfType<BaseCharacterController>();
-
+        BaseCharacterController[] allChars = FindObjectsOfType<BaseCharacterController>();
         foreach (var c in allChars)
         {
-            if (c == this) continue;
-            if (c.teamID != this.teamID) continue;
-
+            if (c == this || c.teamID != this.teamID)
+                continue;
             float dist = Vector3.Distance(transform.position, c.transform.position);
             if (dist < closestDist)
             {
@@ -154,22 +148,28 @@ public class PlayerController : BaseCharacterController
         return nearest;
     }
 
-    // ======================================================================
-    // OVERRIDE THE BASE-CLASS CATCH BEHAVIOR
-    // ======================================================================
     /// <summary>
-    /// Override: For the player, we ignore the AI's probability-based catch
-    /// and rely purely on whether the user pressed F and the ball is in range.
-    /// By default, if we get here, it means we want to succeed automatically
-    /// (i.e., no randomness).
+    /// For players, the catch action (when pressing F) is used to catch thrown balls.
+    /// The probabilistic catch logic is applied here.
     /// </summary>
     public override bool AttemptCatch(BallController ball)
     {
-        // For the Player, let's always succeed if the ball is valid.
-        // (You can add more timing constraints if you want.)
         if (ball == null || IsHoldingBall()) return false;
         
-        // E.g., return true if we simply want "instant catch" on key press:
-        return true;
+        // Compute catch probability based on distance, speed, and angle.
+        float distance = Vector3.Distance(ball.transform.position, transform.position);
+        float distanceFactor = Mathf.Clamp01(1f - (distance / catchRadius));
+        float speed = ball.GetSpeed();
+        float speedFactor = Mathf.Clamp01(1f - (speed / ball.MaxCatchableSpeed));
+        Vector3 ballDirection = (ball.transform.position - transform.position).normalized;
+        float angle = Vector3.Angle(transform.forward, ballDirection);
+        float angleFactor = Mathf.Clamp01(1f - (angle / 90f));
+        float randomnessFactor = Random.Range(0.8f, 1.2f);
+        float catchProbability = (distanceFactor * 0.4f) +
+                                 (speedFactor * 0.3f) +
+                                 (angleFactor * 0.3f);
+        catchProbability *= randomnessFactor;
+        Debug.Log($"Catch Probability: {catchProbability} (Dist: {distanceFactor}, Speed: {speedFactor}, Angle: {angleFactor})");
+        return (catchProbability > 0.7f);
     }
 }
